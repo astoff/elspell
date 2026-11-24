@@ -5,6 +5,10 @@ BATCH_NO_NATIVE = $(BATCH) --eval '(setq native-comp-eln-load-path nil)'
 EL = vibe-spell.el vibe-spell-tests.el vibe-spell-bench.el vibe-spell-compare.el
 ELC = $(EL:.el=.elc)
 
+# Versions upon which the Emacs Lisp port is based.
+HUNSPELL_VERSION = v1.7.5
+NUSPELL_VERSION = v5.1.9
+
 all: $(ELC)
 
 %.elc: %.el
@@ -39,14 +43,12 @@ $(HUNSPELL_LIB): $(HUNSPELL_OBJS)
 # enough on a glibc system.
 HUNSPELL_PARSERS = textparser htmlparser latexparser manparser \
 	firstparser xmlparser odfparser
-HUNSPELL_VERSION = $(shell sed -n 's/^AC_INIT.\[hunspell\],\[\([^]]*\)\].*/\1/p' \
-	hunspell/configure.ac)
 
 $(HUNSPELL_BUILD)/config.h:
 	mkdir -p $(@D)
 	printf '%s\n' '#define HAVE_ICONV 1' '#define ICONV_CONST' \
 		'#define HAVE_LOCALE_H 1' '#define HAVE_LANGINFO_H 1' \
-		'#define VERSION "$(HUNSPELL_VERSION)"' '#define DATADIR ""' > $@
+		'#define VERSION "$(HUNSPELL_VERSION:v%=%)"' '#define DATADIR ""' > $@
 
 $(HUNSPELL_BUILD)/hunspell: hunspell/src/tools/hunspell.cxx \
 		$(HUNSPELL_PARSERS:%=hunspell/src/parsers/%.cxx) \
@@ -55,10 +57,10 @@ $(HUNSPELL_BUILD)/hunspell: hunspell/src/tools/hunspell.cxx \
 		-o $@ $(filter %.cxx,$^) $(HUNSPELL_LIB)
 
 hunspell:
-	git clone https://github.com/hunspell/hunspell.git $@
+	git clone --depth 1 --branch $(HUNSPELL_VERSION) https://github.com/hunspell/hunspell.git $@
 
 nuspell:
-	git clone https://github.com/nuspell/nuspell.git $@
+	git clone --depth 1 --branch $(NUSPELL_VERSION) https://github.com/nuspell/nuspell.git $@
 
 # Benchmark texts and dictionaries.
 DATA = data/alice.txt data/lusiadas.txt data/mujeong.txt data/egri.txt \
