@@ -1,12 +1,63 @@
 #+title: vibe-spell.el
 
-vibe-spell is a slop-rewrite of Hunspell/Nuspell in pure Emacs Lisp.
-It is nearly fully compatible with Hunspell and typically achieves 10%
-to 30% of the native C++ library performance.
+#+begin_quote
+[!NOTE]
+This package includes LLM-generated code.
+#+end_quote
 
-This package only supplies an spellchecking API.
+vibe-spell is a rewrite of Hunspell/Nuspell in pure Emacs Lisp.  It is
+nearly fully compatible with Hunspell and typically achieves 10% to
+30% of the native C++ library performance.
 
-** Compatibility
+This package only supplies a spellchecking API.  For an actual user
+interface, see [[https://github.com/astoff/jit-spell][jit-spell]].
+
+You will also need some Hunspell dictionaries (=*.aff= and =*.dic=
+files).  They are probably already installed on your system or
+available from the package manager.  Alternatively, you can get
+dictionaries from the [[https://github.com/LibreOffice/dictionaries][LibreOffice dictionaries]] repository and place
+them in one of the directories listed in ~vibe-spell-dictionary-path~,
+for instance =~/.local/share/hunspell/=.
+
+** Motivation
+
+Currently, the options for accessing a spellchecker from Emacs are:
+
+- Talking to an external program (GNU Aspell, Hunspell, etc.) through
+  a subprocess, via the =ispell -a= pipe interface.  This is what good
+  old ispell.el, Flyspell and jit-spell traditionally use.
+- Compiling a third-party dynamic module that links against a
+  spellchecking library, which is what [[https://github.com/minad/jinx][jinx]] does.
+
+The problem with the =ispell -a= interface is that one cannot opt out
+of computing correction suggestions for every incorrect word, which is
+three orders of magnitude slower than just checking whether a word is
+correct.  This makes it a poor fit for on-the-fly checking of a whole
+buffer, where most of the work should be cheap yes/no checks and
+suggestions are only needed when the user actually asks for them.
+
+Dynamic modules solve the performance problem, but require every user
+to have a working compiler toolchain and the development headers of
+the spellchecking library.
+
+Other conceivable approaches are:
+- Linking Emacs itself against a spellchecking library.  This seems to
+  have been ruled out, judging by the fact that it never happened.
+- A foreign function interface (FFI) in Emacs, which would allow
+  calling Hunspell or a similar library directly.  Such a feature has
+  been rejected by the Emacs maintainers.
+- A small helper program, talking to Emacs over a pipe with a better
+  protocol than =ispell -a=.  This can be done, and with prebuilt
+  binaries for every OS it could potentially "just work".
+
+Apart from that, a pure Emacs Lisp implementation is really the only
+option left for a good spellchecking experience that works out of the
+box, with no distribution hurdles.
+
+Moreover, this package is an interesting experiment in how far Emacs
+Lisp can be pushed.  It performs better than I would have guessed.
+
+** Compatibility with Hunspell
 
 We aim to be compatible with the widely available Hunspell dictionary
 format and, within reasonable bounds, with Hunspell's behavior.  Among
@@ -65,3 +116,17 @@ less for usability.
 There is a 500 ms timeout (GC excluded) when computing suggestions;
 the results for Korean mean that we reach that timeout on practically
 every word.
+
+** Development
+
+The Makefile has targets for the usual development tasks:
+
+- ~make~ byte-compiles the package.
+- ~make hunspell nuspell~ fetches the reference versions of those
+  programs.
+- ~make tests~ runs the test suite, which includes the Hunspell tests.
+- ~make compare~ checks that vibe-spell and Hunspell find the same
+  misspelled words in Emacs's =etc/HELLO= (or ~COMPARE_FILE~), for
+  every dictionary distributed in Debian.
+- ~make bench~ runs the benchmarks shown above, on classic texts
+  downloaded from Project Gutenberg and Wikisource.
