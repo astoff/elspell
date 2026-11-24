@@ -1,9 +1,9 @@
-;;; vibe-spell.el --- Hunspell-compatible spell checker  -*- lexical-binding: t; -*-
+;;; elspell.el --- Hunspell-compatible spell checker  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2026  Augusto Stoffel
 
 ;; Author: Augusto Stoffel <arstoffel@gmail.com>
-;; URL: https://github.com/astoff/vibe-spell
+;; URL: https://github.com/astoff/elspell
 ;; Keywords: text
 ;; Package-Requires: ((emacs "28.1") (compat "31.1"))
 ;; Version: 0
@@ -26,13 +26,13 @@
 ;; An Emacs Lisp port of the word-checking and suggestion algorithms of
 ;; Nuspell (https://github.com/nuspell/nuspell), a C++ reimplementation
 ;; of Hunspell.  It reads Hunspell dictionaries (.aff and .dic files)
-;; and provides `vibe-spell-check' and `vibe-spell-suggest', plus a
-;; personal word list (`vibe-spell-add-word', `vibe-spell-remove-word').
+;; and provides `elspell-check' and `elspell-suggest', plus a
+;; personal word list (`elspell-add-word', `elspell-remove-word').
 ;;
 ;; Known limitations:
 ;;
 ;; - Dictionaries that set COMPLEXPREFIXES (double prefix stripping,
-;;   used by a handful of languages) are rejected at `vibe-spell-create'
+;;   used by a handful of languages) are rejected at `elspell-create'
 ;;   time.
 ;; - LANG-specific casing rules (e.g. Turkish dotless i) are not
 ;;   implemented; casing uses Emacs's own `upcase'/`downcase'.
@@ -47,12 +47,12 @@
 (require 'cl-lib)
 (require 'compat)
 
-(defgroup vibe-spell nil
+(defgroup elspell nil
   "Hunspell-compatible spell checking library in pure Emacs Lisp."
-  :prefix "vibe-spell-"
+  :prefix "elspell-"
   :group 'text)
 
-(defcustom vibe-spell-dictionary-path
+(defcustom elspell-dictionary-path
   (append
    (parse-colon-path (getenv "DICPATH"))
    (if (memq system-type '(windows-nt ms-dos))
@@ -76,11 +76,11 @@ Given a dictionary NAME, we expect to find files NAME.aff and NAME.dic
 in one of those directories."
   :type '(repeat directory))
 
-(defcustom vibe-spell-personal-dictionary-format
+(defcustom elspell-personal-dictionary-format
   (append
    (when-let* ((file (getenv "WORDLIST")))
      (list (string-replace "%" "%%" (expand-file-name file "~/"))))
-   (list (expand-file-name "vibe-spell/%s" user-emacs-directory))
+   (list (expand-file-name "elspell/%s" user-emacs-directory))
    (pcase system-type
      ((or 'windows-nt 'ms-dos)
       (when-let* ((home (getenv "USERPROFILE")))
@@ -98,14 +98,14 @@ Donaudampfschiffahrtselektrizitätenhauptbetriebswerkbauunterbeamtengesellschaft
   "Maximum word length to be processed by the spell checker.
 Longer words are always reported as correct.")
 
-(defcustom vibe-spell-check-time-limit 5
+(defcustom elspell-check-time-limit 5
   "Time limit, in milliseconds, for checking a single word.
-If checking a word takes longer than that, `vibe-spell-check' returns
+If checking a word takes longer than that, `elspell-check' returns
 `timeout'.  If nil, there is no limit."
   :type '(choice (natnum :tag "Milliseconds")
                  (const :tag "No limit" nil)))
 
-(defcustom vibe-spell-suggest-time-limit 500
+(defcustom elspell-suggest-time-limit 500
   "Time limit, in milliseconds, for suggesting corrections for a word.
 When it is exceeded, the suggestions found so far are returned.  If
 nil, there is no limit."
@@ -122,12 +122,12 @@ nil, there is no limit."
 
 ;;; Public API
 
-(defun vibe-spell-create (name)
+(defun elspell-create (name)
   "Create a spell checker object for dictionary NAME.
 The returned object can be used as DICT argument to the other functions
 of this library.
 
-This searches `vibe-spell-dictionary-path' for files named NAME.aff and
+This searches `elspell-dictionary-path' for files named NAME.aff and
 NAME.dic."
   (let* ((base (-find-dictionary-base name))
          (aff-file (concat base ".aff"))
@@ -138,16 +138,16 @@ NAME.dic."
           (gc-cons-threshold most-positive-fixnum))
       (-parse-aff dict aff-file)
       (when (-dict-complex-prefixes dict)
-        (error "vibe-spell: %s uses COMPLEXPREFIXES, which is not supported" name))
+        (error "elspell: %s uses COMPLEXPREFIXES, which is not supported" name))
       (-parse-dic dict dic-file)
       (-init-personal-dictionary dict name)
       dict)))
 
-(defun vibe-spell-list-dictionaries ()
+(defun elspell-list-dictionaries ()
   "Return a list of available dictionaries.
-These are the names you can pass to `vibe-spell-create'."
+These are the names you can pass to `elspell-create'."
   (let (names)
-    (dolist (dir vibe-spell-dictionary-path)
+    (dolist (dir elspell-dictionary-path)
       (when (file-directory-p dir)
         (dolist (aff (directory-files dir t "\\.aff\\'" t))
           (let ((base (file-name-sans-extension aff)))
@@ -157,34 +157,34 @@ These are the names you can pass to `vibe-spell-create'."
     ;; For Emacs ≤29
     (compat-call sort (delete-dups names) :in-place t)))
 
-(defun vibe-spell-check (dict word)
+(defun elspell-check (dict word)
   "Return non-nil if WORD is spelled correctly according to DICT.
-If the check exceeds `vibe-spell-check-time-limit', return `timeout'."
+If the check exceeds `elspell-check-time-limit', return `timeout'."
   (or (length> word -max-word-length)
       (let* ((current-time-list nil)
-             (-time-limit (-time-limit-from-now vibe-spell-check-time-limit)))
+             (-time-limit (-time-limit-from-now elspell-check-time-limit)))
         (catch '-time-limit
           (-spell dict word)))))
 
-(defun vibe-spell-suggest (dict word)
+(defun elspell-suggest (dict word)
   "Return a list of corrections for WORD based on DICT.
-See also `vibe-spell-suggest-time-limit'."
+See also `elspell-suggest-time-limit'."
   (unless (length> word -max-word-length)
     (let* ((gc-cons-percentage (max gc-cons-percentage 1.0))
            (current-time-list nil)
-           (-time-limit (-time-limit-from-now vibe-spell-suggest-time-limit))
+           (-time-limit (-time-limit-from-now elspell-suggest-time-limit))
            ;; `-suggest-for-casing' catches its own timeouts; this only
            ;; catches the early compound check in `-suggest-priv'.
            (sugs (catch '-time-limit (-suggest-priv dict word))))
       (unless (eq sugs 'timeout) sugs))))
 
-(defun vibe-spell-add-word (dict word &optional save)
+(defun elspell-add-word (dict word &optional save)
   "Add WORD to DICT, and optionally SAVE it to personal dictionary file."
   (-dict-add-word dict word nil)
   (when save
     (-save-personal-word (-dict-pdict dict) word)))
 
-(defun vibe-spell-remove-word (dict word &optional save)
+(defun elspell-remove-word (dict word &optional save)
   "Remove WORD from DICT, and optionally SAVE that to the personal dictionary file.
 Return non-nil if WORD was actually present and therefore removed."
   (let ((removed (-dict-remove-word dict word)))
@@ -192,7 +192,7 @@ Return non-nil if WORD was actually present and therefore removed."
       (-remove-personal-word (-dict-pdict dict) word))
     removed))
 
-(defun vibe-spell-word-regexp (dict)
+(defun elspell-word-regexp (dict)
   "Return a regexp matching a word according to DICT."
   (-dict-word-regexp dict))
 
@@ -246,7 +246,7 @@ Return non-nil if WORD was actually present and therefore removed."
 ;; - Unlike Nuspell, a suggestion that OCONV maps back to the
 ;;   misspelled word itself is dropped, as Hunspell does (its gh#1002).
 ;; - Unlike Nuspell, checking and suggesting have time limits
-;;   (`vibe-spell-check-time-limit', `vibe-spell-suggest-time-limit'),
+;;   (`elspell-check-time-limit', `elspell-suggest-time-limit'),
 ;;   in the spirit of Hunspell's TIMELIMIT_* ones; but a check that
 ;;   runs out accepts the word, where Hunspell rejects it.  GC time
 ;;   does not count toward the limits.
@@ -300,11 +300,11 @@ Return non-nil if WORD was actually present and therefore removed."
 
 (defun -find-dictionary-base (name)
 ;; Return the path, sans extension, of dictionary NAME.  Searches
-;; `vibe-spell-dictionary-path' for the first directory containing
+;; `elspell-dictionary-path' for the first directory containing
 ;; both a readable NAME.aff and a readable NAME.dic, and returns that
 ;; directory's `expand-file-name' of NAME.  Signals an error if no
 ;; directory in the list has both files.
-  (or (named-let recur ((tail vibe-spell-dictionary-path))
+  (or (named-let recur ((tail elspell-dictionary-path))
         (when tail
           (or (let ((dir (car tail)))
                 (let ((base (expand-file-name name dir)))
@@ -313,7 +313,7 @@ Return non-nil if WORD was actually present and therefore removed."
                        base)))
               (recur (cdr tail)))))
       (user-error "\
-vibe-spell: cannot find %s.aff and %s.dic under `vibe-spell-dictionary-path'"
+elspell: cannot find %s.aff and %s.dic under `elspell-dictionary-path'"
                   name name)))
 
 ;;;; Data structures
@@ -374,7 +374,7 @@ vibe-spell: cannot find %s.aff and %s.dic under `vibe-spell-dictionary-path'"
   (flag-type 'single-char :type (member single-char utf-8 long num))
   (coding 'undecided :type symbol)     ; coding system of the       . aff/.dic files
   (ignored-chars "" :type string)
-  (word-regexp nil :type (or null string)) ; see `vibe-spell-word-regexp'
+  (word-regexp nil :type (or null string)) ; see `elspell-word-regexp'
   (complex-prefixes nil :type boolean)
   (fullstrip nil :type boolean)
   (checksharps nil :type boolean)
@@ -444,18 +444,18 @@ vibe-spell: cannot find %s.aff and %s.dic under `vibe-spell-dictionary-path'"
     ('long
      (let* ((str (-flag-bytes dict str)) (i 0) (n (length str)) result)
        (when (oddp n)
-         (error "vibe-spell: odd number of characters in long flags %S" str))
+         (error "elspell: odd number of characters in long flags %S" str))
        (while (< i n)
          (push (logior (ash (aref str i) 8) (aref str (1+ i))) result)
          (setq i (+ i 2)))
        (nreverse result)))
     ('num
      (mapcar #'string-to-number (split-string str ",")))
-    (type (error "vibe-spell: unknown flag type %S" type))))
+    (type (error "elspell: unknown flag type %S" type))))
 
 (defun -decode-first-flag (dict str)
   (let ((flags (-decode-flags dict str)))
-    (unless flags (error "vibe-spell: missing flag in %S" str))
+    (unless flags (error "elspell: missing flag in %S" str))
     (car flags)))
 
 (defun -decode-flags-possible-alias (dict str)
@@ -468,7 +468,7 @@ vibe-spell: cannot find %s.aff and %s.dic under `vibe-spell-dictionary-path'"
       (let ((idx (string-to-number str)))
         (if (and (> idx 0) (<= idx (length aliases)))
             (aref aliases (1- idx))
-          (error "vibe-spell: invalid flag alias %S" str))))))
+          (error "elspell: invalid flag alias %S" str))))))
 
 (defun -flags-contain (flags flag)
 ;; Return non-nil if list of flag integers FLAGS contains FLAG.  A
@@ -518,7 +518,7 @@ vibe-spell: cannot find %s.aff and %s.dic under `vibe-spell-dictionary-path'"
          ((eq c ?\[)
           (setq i (1+ i))
           (when (>= i n)
-            (error "vibe-spell: unterminated bracket in condition %S" str))
+            (error "elspell: unterminated bracket in condition %S" str))
           (let (negated)
             (when (eq (aref str i) ?^)
               (setq negated t)
@@ -527,13 +527,13 @@ vibe-spell: cannot find %s.aff and %s.dic under `vibe-spell-dictionary-path'"
               (while (and (< i n) (not (eq (aref str i) ?\])))
                 (setq i (1+ i)))
               (when (= i start)
-                (error "vibe-spell: empty bracket in condition %S" str))
+                (error "elspell: empty bracket in condition %S" str))
               (when (>= i n)
-                (error "vibe-spell: unterminated bracket in condition %S" str))
+                (error "elspell: unterminated bracket in condition %S" str))
               (push (cons negated (substring str start i)) specs)
               (setq i (1+ i)))))
          ((eq c ?\])
-          (error "vibe-spell: stray closing bracket in condition %S" str))
+          (error "elspell: stray closing bracket in condition %S" str))
          (t
           (push c specs)
           (setq i (1+ i))))))
@@ -1659,7 +1659,7 @@ vibe-spell: cannot find %s.aff and %s.dic under `vibe-spell-dictionary-path'"
 ;; without it, a dictionary with unusually many affixes could make
 ;; suggesting take an impractically long time.  Mirrors Nuspell's
 ;; `Suggester::max_attempts_for_long_alogs'.  Unlike Nuspell, there is
-;; no COMPLEXPREFIXES branch, since `vibe-spell-create' already
+;; no COMPLEXPREFIXES branch, since `elspell-create' already
 ;; rejects such dictionaries; see the Commentary at the top of this
 ;; file.
   (let* ((p (/ (length (-dict-prefix-table dict)) 20))
@@ -2411,12 +2411,11 @@ vibe-spell: cannot find %s.aff and %s.dic under `vibe-spell-dictionary-path'"
                          (-sugs-list box)))))
 
 (defun -suggest-priv (dict word)
-;; Return VIBE-SPELL-SUGGEST's suggestions for WORD, as a plain list.
-;; Applies DICT's input ICONV to WORD and trims its trailing
-;; abbreviation dots, if any, then handles Nuspell's
-;; `compound_force_uppercase' early-exit special case before
-;; dispatching to `-suggest-for-casing'.  Mirrors Nuspell's
-;; `Suggester::suggest_priv'.
+;; Return suggestions for WORD, as a plain list.  Applies DICT's input
+;; ICONV to WORD and trims its trailing abbreviation dots, if any,
+;; then handles Nuspell's `compound_force_uppercase' early-exit
+;; special case before dispatching to `-suggest-for-casing'.  Mirrors
+;; Nuspell's `Suggester::suggest_priv'.
   (unless (string-empty-p word)
     (let* ((word (-substr-replace (-dict-input-iconv dict) word))
            (abbreviation (eq (aref word (1- (length word))) ?.))
@@ -2499,7 +2498,7 @@ vibe-spell: cannot find %s.aff and %s.dic under `vibe-spell-dictionary-path'"
 (defun -dict-remove-word (dict word)
 ;; Remove one nil-flags entry of WORD from DICT's words table.  This
 ;; is the counterpart of `-dict-add-word' called with nil FLAGS, which
-;; is how `vibe-spell-add-word' always calls it; an entry with non-nil
+;; is how `elspell-add-word' always calls it; an entry with non-nil
 ;; flags, e.g. one loaded from the dictionary's own .dic file, is left
 ;; alone even if WORD also has a nil-flags entry alongside it.  Any
 ;; hidden-homonym duplicate `-dict-add-word' may have added for WORD
@@ -2600,7 +2599,7 @@ vibe-spell: cannot find %s.aff and %s.dic under `vibe-spell-dictionary-path'"
   (let ((i 0) (n (length str)) (result nil))
     (while (< i n)
       (unless (eq (aref str i) ?\()
-        (error "vibe-spell: invalid COMPOUNDRULE %S" str))
+        (error "elspell: invalid COMPOUNDRULE %S" str))
       (setq i (1+ i))
       (let ((start i))
         (while (and (< i n) (not (eq (aref str i) ?\))))
@@ -2804,7 +2803,7 @@ vibe-spell: cannot find %s.aff and %s.dic under `vibe-spell-dictionary-path'"
                               :cont-flags cont-flags :condition condition))))))))
 
 (defun -make-word-regexp (wordchars)
-;; Return the regexp described in `vibe-spell-word-regexp'.  WORDCHARS
+;; Return the regexp described in `elspell-word-regexp'.  WORDCHARS
 ;; is the value of the dictionary's WORDCHARS directive.
   (let (edge inner)
     (dotimes (i (length wordchars))
@@ -2860,7 +2859,7 @@ vibe-spell: cannot find %s.aff and %s.dic under `vibe-spell-dictionary-path'"
                          ("LONG" 'long)
                          ("NUM" 'num)
                          ("UTF-8" 'utf-8)
-                         (_ (error "vibe-spell: invalid FLAG type %S" (car args))))))
+                         (_ (error "elspell: invalid FLAG type %S" (car args))))))
                 ("IGNORE" (setf (-dict-ignored-chars dict) (car args)))
                 ("TRY" (setf (-dict-try-chars dict) (car args)))
                 ("WORDCHARS" (setq wordchars (car args)))
@@ -2998,10 +2997,10 @@ vibe-spell: cannot find %s.aff and %s.dic under `vibe-spell-dictionary-path'"
 
 (defun -personal-dictionary-file (name)
 ;; Return the personal dictionary file to use for dictionary NAME.
-;; See `vibe-spell-personal-dictionary-format': this is the first file
+;; See `elspell-personal-dictionary-format': this is the first file
 ;; named by it that exists, or, if none exists, the file named by its
 ;; first element.
-  (let ((formats (ensure-list vibe-spell-personal-dictionary-format)))
+  (let ((formats (ensure-list elspell-personal-dictionary-format)))
     (or (named-let recur ((tail formats))
           (when tail
             (or (let ((fmt (car tail)))
@@ -3012,7 +3011,7 @@ vibe-spell: cannot find %s.aff and %s.dic under `vibe-spell-dictionary-path'"
 
 (defun -init-personal-dictionary (dict name)
 ;; Set up DICT's personal dictionary, and load any words already in
-;; it.  NAME is the dictionary name passed to `vibe-spell-create'.
+;; it.  NAME is the dictionary name passed to `elspell-create'.
   (let ((file (-personal-dictionary-file name)))
     (setf (-dict-pdict dict) file)
     (when (file-readable-p file)
@@ -3049,8 +3048,8 @@ vibe-spell: cannot find %s.aff and %s.dic under `vibe-spell-dictionary-path'"
         removed))))
 
 ;; Local Variables:
-;; read-symbol-shorthands: (("-" . "vibe-spell--"))
+;; read-symbol-shorthands: (("-" . "elspell--"))
 ;; End:
 
-(provide 'vibe-spell)
-;;; vibe-spell.el ends here
+(provide 'elspell)
+;;; elspell.el ends here

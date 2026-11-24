@@ -1,5 +1,6 @@
 AGENTS.md
 Makefile
+elspell-bench.el
+elspell-compare.el
+elspell-tests.el
 hunspell-check.c
-vibe-spell-bench.el
-vibe-spell-tests.el

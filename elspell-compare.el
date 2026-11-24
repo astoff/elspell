@@ -1,4 +1,4 @@
-;;; vibe-spell-compare.el --- Compare vibe-spell.el with Hunspell  -*- lexical-binding: t; -*-
+;;; elspell-compare.el --- Compare elspell.el with Hunspell  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2026  Augusto Stoffel
 
@@ -21,7 +21,7 @@
 ;;; Commentary:
 
 ;; Checks, for every dictionary in the project's data/ directory,
-;; whether vibe-spell and Hunspell agree on which words of a text are
+;; whether elspell and Hunspell agree on which words of a text are
 ;; misspelled -- by default Emacs's HELLO file, which has words in many
 ;; scripts, as shown by `view-hello-file' (so with its text/enriched
 ;; markup decoded), or else a given text file.
@@ -29,7 +29,7 @@
 ;; hunspell-check --print (see hunspell-check.c and the Makefile)
 ;; splits the text into words and checks each with Hunspell_spell();
 ;; the distinct words it found are then also checked with
-;; `vibe-spell-check'.  A word for which `vibe-spell-check' times out
+;; `elspell-check'.  A word for which `elspell-check' times out
 ;; counts as correct.
 ;;
 ;; Some words are left out of the comparison, since Hunspell cannot
@@ -38,32 +38,32 @@
 ;; dictionary in an 8-bit encoding, those the encoding cannot represent.
 ;;
 ;; This is a batch-only, noninteractive script.  Run with, e.g.:
-;;   emacs -batch -L . -l vibe-spell-compare.el -f vibe-spell-compare [FILE]
+;;   emacs -batch -L . -l elspell-compare.el -f elspell-compare [FILE]
 ;;
 ;; It reports the words the two disagree on for each dictionary, and
 ;; exits with a nonzero status if there are any.
 
 ;;; Code:
 
-(require 'vibe-spell)
+(require 'elspell)
 
-(defconst vibe-spell-compare--project-dir
+(defconst elspell-compare--project-dir
   (file-name-directory (or load-file-name buffer-file-name default-directory))
-  "Directory containing vibe-spell.el and vibe-spell-compare.el.")
+  "Directory containing elspell.el and elspell-compare.el.")
 
-(defconst vibe-spell-compare--data-dir
-  (expand-file-name "data/" vibe-spell-compare--project-dir)
+(defconst elspell-compare--data-dir
+  (expand-file-name "data/" elspell-compare--project-dir)
   "Directory containing the dictionaries to compare.")
 
-(defvar vibe-spell-compare-hunspell-check
-  (expand-file-name ".tmp/hunspell-check" vibe-spell-compare--project-dir)
+(defvar elspell-compare-hunspell-check
+  (expand-file-name ".tmp/hunspell-check" elspell-compare--project-dir)
   "The hunspell-check executable, built from hunspell-check.c.")
 
-(setq vibe-spell-dictionary-path (list vibe-spell-compare--data-dir))
+(setq elspell-dictionary-path (list elspell-compare--data-dir))
 
-(setq vibe-spell-personal-dictionary-format "/dev/null/%s")
+(setq elspell-personal-dictionary-format "/dev/null/%s")
 
-(defun vibe-spell-compare--write-hello-file (file)
+(defun elspell-compare--write-hello-file (file)
   "Write the text of the HELLO file, as `view-hello-file' shows it, to FILE."
   (save-window-excursion
     (view-hello-file)
@@ -71,21 +71,21 @@
       (write-region nil nil file nil 'silent))
     (kill-buffer)))
 
-(defun vibe-spell-compare--checkable-p (dict word)
+(defun elspell-compare--checkable-p (dict word)
   "Return non-nil if Hunspell can check WORD with DICT; see Commentary."
   (and (not (string-match-p (rx (any (#x10000 . #x10ffff))) word))
-       (not (unencodable-char-position 0 nil (vibe-spell--dict-coding dict)
+       (not (unencodable-char-position 0 nil (elspell--dict-coding dict)
                                        nil word))))
 
-(defun vibe-spell-compare--hunspell (name file)
+(defun elspell-compare--hunspell (name file)
   "Check FILE's words with Hunspell's dictionary NAME.
 Return an alist of (WORD . CORRECT) for the distinct words, in order."
   (let ((coding-system-for-read 'utf-8)
         ;; hunspell-check looks for the dictionary in data/.
-        (default-directory vibe-spell-compare--project-dir)
+        (default-directory elspell-compare--project-dir)
         (seen (make-hash-table :test #'equal))
         (results nil))
-    (dolist (line (process-lines vibe-spell-compare-hunspell-check
+    (dolist (line (process-lines elspell-compare-hunspell-check
                                  "--print" name file))
       (pcase line
         ((rx bos (let verdict (or "good" "bad")) ": " (let word (* anything)) eos)
@@ -94,8 +94,8 @@ Return an alist of (WORD . CORRECT) for the distinct words, in order."
            (push (cons word (equal verdict "good")) results)))))
     (nreverse results)))
 
-(defun vibe-spell-compare (&optional file)
-  "Compare vibe-spell and Hunspell on FILE's words, for each dictionary.
+(defun elspell-compare (&optional file)
+  "Compare elspell and Hunspell on FILE's words, for each dictionary.
 When FILE is nil, take it from the leftover command-line arguments,
 or use Emacs's HELLO file if there are none; see Commentary.  Then
 exit Emacs, with status 0 if they agree on every dictionary and 1
@@ -106,22 +106,22 @@ otherwise."
         (disagreed nil)
         (errored nil))
     (unless file
-      (setq hello-file (make-temp-file "vibe-spell-compare"))
-      (vibe-spell-compare--write-hello-file hello-file)
+      (setq hello-file (make-temp-file "elspell-compare"))
+      (elspell-compare--write-hello-file hello-file)
       (setq file hello-file))
     (unwind-protect
-        (dolist (name (vibe-spell-list-dictionaries))
+        (dolist (name (elspell-list-dictionaries))
           (condition-case err
-              (let* ((dict (vibe-spell-create name))
-                     (all-results (vibe-spell-compare--hunspell name file))
+              (let* ((dict (elspell-create name))
+                     (all-results (elspell-compare--hunspell name file))
                      (results (seq-filter (lambda (r)
-                                            (vibe-spell-compare--checkable-p dict (car r)))
+                                            (elspell-compare--checkable-p dict (car r)))
                                           all-results))
                      (only-ours nil)
                      (only-theirs nil)
                      (correct 0))
                 (pcase-dolist (`(,word . ,theirs) results)
-                  (let ((ours (and (vibe-spell-check dict word) t)))
+                  (let ((ours (and (elspell-check dict word) t)))
                     (when ours (incf correct))
                     (pcase (cons ours theirs)
                       ('(nil . t) (push word only-ours))
@@ -129,11 +129,11 @@ otherwise."
                 (if (or only-ours only-theirs)
                     (progn
                       (push name disagreed)
-                      (message "%s: MISMATCH (%d words, %d skipped, %d correct per vibe-spell)"
+                      (message "%s: MISMATCH (%d words, %d skipped, %d correct per elspell)"
                                name (length results)
                                (- (length all-results) (length results)) correct)
                       (when only-ours
-                        (message "  only vibe-spell rejects: %s"
+                        (message "  only elspell rejects: %s"
                                  (string-join (nreverse only-ours) " ")))
                       (when only-theirs
                         (message "  only Hunspell rejects:   %s"
@@ -155,5 +155,5 @@ otherwise."
                (if names (format ": %s" (string-join (reverse names) " ")) "")))
     (kill-emacs (if (or disagreed errored) 1 0))))
 
-(provide 'vibe-spell-compare)
-;;; vibe-spell-compare.el ends here
+(provide 'elspell-compare)
+;;; elspell-compare.el ends here

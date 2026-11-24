@@ -1,9 +1,9 @@
-/* hunspell-check.c --- apples-to-apples C benchmark for vibe-spell-bench.el
+/* hunspell-check.c --- apples-to-apples C benchmark for elspell-bench.el
  *
  * Measures how long Hunspell_create() takes to load a dictionary, and
  * how long Hunspell_spell() then takes to check every word of a file,
- * the same way vibe-spell-bench.el measures vibe-spell-create and
- * vibe-spell-check: the file is read into memory once, up front,
+ * the same way elspell-bench.el measures elspell-create and
+ * elspell-check: the file is read into memory once, up front,
  * before any checking is timed; words are then found and checked on
  * the fly, one at a time, rather than first collected into a list; a
  * word is a maximal run of Unicode alphabetic characters, apostrophes
@@ -11,7 +11,7 @@
  * any leading and trailing apostrophes and hyphens (a run of nothing
  * but those is skipped) -- the same definition
  * `(rx alpha (? (* (any alpha ?' ?-)) alpha))' uses in
- * vibe-spell-bench.el.  Each word is converted from UTF-8 to the
+ * elspell-bench.el.  Each word is converted from UTF-8 to the
  * dictionary's own declared encoding (its .aff file's SET directive,
  * read back via Hunspell_get_dic_encoding) before being checked,
  * since Hunspell_spell expects words already in that encoding and
@@ -20,16 +20,16 @@
  *
  * With --suggest, it also measures how long Hunspell_suggest() takes,
  * called once for each misspelled word occurrence the check found, in
- * a separately timed pass after it, as vibe-spell-bench.el does.
+ * a separately timed pass after it, as elspell-bench.el does.
  * With --lines N, only the first N lines of FILE are used.
  *
  * With --print, "good: WORD" or "bad: WORD" is also printed for each
- * word checked; vibe-spell-compare.el uses this.
+ * word checked; elspell-compare.el uses this.
  *
  * Usage: hunspell-check [--suggest] [--lines N] [--print] DICT-NAME FILE
  * DICT-NAME is looked up as data/DICT-NAME.{aff,dic}, relative to the
  * current directory (the project directory, when run by make), the
- * same files vibe-spell-bench.el loads.
+ * same files elspell-bench.el loads.
  *
  * Build: make .tmp/hunspell-check, which links against a static Hunspell built
  * from the hunspell/ source checkout.

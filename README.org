@@ -1,11 +1,11 @@
-#+title: vibe-spell.el
+#+title: Elspell — Hunspell-compatible spell checker in pure Emacs Lisp
 
 #+begin_quote
 [!NOTE]
 This package includes LLM-generated code.
 #+end_quote
 
-vibe-spell is a rewrite of Hunspell/Nuspell in pure Emacs Lisp.  It is
+Elspell is a rewrite of Hunspell/Nuspell in pure Emacs Lisp.  It is
 nearly fully compatible with Hunspell and typically achieves 10% to
 30% of the native C++ library performance.
 
@@ -16,7 +16,7 @@ You will also need some Hunspell dictionaries (=*.aff= and =*.dic=
 files).  They are probably already installed on your system or
 available from the package manager.  Alternatively, you can get
 dictionaries from the [[https://github.com/LibreOffice/dictionaries][LibreOffice dictionaries]] repository and place
-them in one of the directories listed in ~vibe-spell-dictionary-path~,
+them in one of the directories listed in ~elspell-dictionary-path~,
 for instance =~/.local/share/hunspell/=.
 
 ** Motivation
@@ -82,13 +82,13 @@ Mongolian, seems to some malformed rules.
 
 ** Benchmarks
 
-Here we provide some comparisons between Hunspell and vibe-spell.el
+Here we provide some comparisons between Hunspell and Elspell
 running with native compilation and simple bytecode compilation.
 Times are the average per word.  The first rows exclude garbage
 collection, while "with GC" includes the time consumed by GC with its
 default settings.
 
-| CHECK     | Hunspell     | vibe-spell.el, native | vibe-spell.el, bytecode | Dictionary size (aff/dic) |
+| CHECK     | Hunspell     | Elspell, native | Elspell, bytecode | Dictionary size (aff/dic) |
 |-----------+--------------+-----------------------+-------------------------+---------------------------|
 | en_US     | 0.59 µs (1×) | 2.6 µs (4.5×)         | 4.0 µs (6.8×)           | 50/79,013                 |
 | (with GC) |              | 4.3 µs (7.3×)         | 5.7 µs (9.6×)           |                           |
@@ -105,7 +105,7 @@ For suggesting corrections, the gap with Hunspell is larger.  Since
 corrections are typically used in interactive context, this matters
 less for usability.
 
-| SUGGEST | Hunspell    | vibe-spell.el, native | vibe-spell.el, bytecode |
+| SUGGEST | Hunspell    | Elspell, native | Elspell, bytecode |
 |---------+-------------+-----------------------+-------------------------|
 | en_US   | 12 ms (1×)  | 51 ms (4.2×)          | 74 ms (6.0×)            |
 | ko      | 104 ms (1×) | 554 ms (*)            | 556 ms (*)              |
@@ -125,7 +125,7 @@ The Makefile has targets for the usual development tasks:
 - ~make hunspell nuspell~ fetches the reference versions of those
   programs.
 - ~make tests~ runs the test suite, which includes the Hunspell tests.
-- ~make compare~ checks that vibe-spell and Hunspell find the same
+- ~make compare~ checks that Elspell and Hunspell find the same
   misspelled words in Emacs's =etc/HELLO= (or ~COMPARE_FILE~), for
   every dictionary distributed in Debian.
 - ~make bench~ runs the benchmarks shown above, on classic texts

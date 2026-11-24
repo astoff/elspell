@@ -2,7 +2,7 @@ EMACS ?= emacs
 BATCH = $(EMACS) --batch -L .
 BATCH_NO_NATIVE = $(BATCH) --eval '(setq native-comp-eln-load-path nil)'
 
-EL = vibe-spell.el vibe-spell-tests.el vibe-spell-bench.el vibe-spell-compare.el
+EL = elspell.el elspell-tests.el elspell-bench.el elspell-compare.el
 ELC = $(EL:.el=.elc)
 
 # Versions upon which the Emacs Lisp port is based.
@@ -74,7 +74,7 @@ data: $(DATA)
 data/CACHEDIR.TAG:
 	mkdir -p data
 	printf '%s\n' 'Signature: 8a477f597d28d172789f06886806bc55' \
-		'# This file is a cache directory tag created by vibe-spell.' \
+		'# This file is a cache directory tag created by elspell.' \
 		'# For information about cache directory tags, see:' \
 		'#	https://bford.info/cachedir/' > $@
 
@@ -92,7 +92,7 @@ data/lusiadas.txt: | data/CACHEDIR.TAG
 # Wikisource; the sed script drops the wiki templates (the page header
 # and the paragraph-break markers), leaving plain text.
 data/mujeong.txt: | data/CACHEDIR.TAG
-	curl -L -A vibe-spell-bench \
+	curl -L -A elspell-bench \
 		'https://ko.wikisource.org/w/index.php?title=%EB%AC%B4%EC%A0%95/1%EC%9E%A5~20%EC%9E%A5&action=raw' \
 		| sed -e '/^{{.*}}$$/d' -e '/^{{/,/^}}$$/d' > $@
 
@@ -142,15 +142,15 @@ data/hunspell-dictionary: | data/CACHEDIR.TAG
 
 .PHONY: tests
 tests: hunspell nuspell
-	$(BATCH) -l ert -l vibe-spell-tests.el -f ert-run-tests-batch-and-exit
+	$(BATCH) -l ert -l elspell-tests.el -f ert-run-tests-batch-and-exit
 
-# Check that vibe-spell and Hunspell find the same misspelled words in
+# Check that elspell and Hunspell find the same misspelled words in
 # Emacs's etc/HELLO (or COMPARE_FILE), for every dictionary in data/.
 COMPARE_FILE ?=
 
 .PHONY: compare
 compare: data/hunspell-dictionary all .tmp/hunspell-check
-	$(BATCH) -l vibe-spell-compare.el -f vibe-spell-compare $(COMPARE_FILE)
+	$(BATCH) -l elspell-compare.el -f elspell-compare $(COMPARE_FILE)
 
 BENCH_FLAGS ?=
 
@@ -159,33 +159,33 @@ bench: $(DATA) all .tmp/hunspell-check
 	@echo ================================================================================
 	@.tmp/hunspell-check $(BENCH_FLAGS) en_US data/alice.txt
 	@echo --------------------------------------------------------------------------------
-	@$(BATCH) -l vibe-spell-bench.el -f vibe-spell-bench $(BENCH_FLAGS) en_US data/alice.txt
+	@$(BATCH) -l elspell-bench.el -f elspell-bench $(BENCH_FLAGS) en_US data/alice.txt
 	@echo --------------------------------------------------------------------------------
-	@$(BATCH_NO_NATIVE) -l vibe-spell-bench.el -f vibe-spell-bench $(BENCH_FLAGS) en_US data/alice.txt
+	@$(BATCH_NO_NATIVE) -l elspell-bench.el -f elspell-bench $(BENCH_FLAGS) en_US data/alice.txt
 # Suggestions for Korean take too long to be worth benchmarking.
 ifeq ($(filter --suggest,$(BENCH_FLAGS)),)
 	@echo ================================================================================
 	@.tmp/hunspell-check $(BENCH_FLAGS) ko data/mujeong.txt
 	@echo --------------------------------------------------------------------------------
-	@$(BATCH) -l vibe-spell-bench.el -f vibe-spell-bench $(BENCH_FLAGS) ko data/mujeong.txt
+	@$(BATCH) -l elspell-bench.el -f elspell-bench $(BENCH_FLAGS) ko data/mujeong.txt
 	@echo --------------------------------------------------------------------------------
-	@$(BATCH_NO_NATIVE) -l vibe-spell-bench.el -f vibe-spell-bench $(BENCH_FLAGS) ko data/mujeong.txt
+	@$(BATCH_NO_NATIVE) -l elspell-bench.el -f elspell-bench $(BENCH_FLAGS) ko data/mujeong.txt
 endif
 	@echo ================================================================================
 	@.tmp/hunspell-check $(BENCH_FLAGS) pt_BR data/lusiadas.txt
 	@echo --------------------------------------------------------------------------------
-	@$(BATCH) -l vibe-spell-bench.el -f vibe-spell-bench $(BENCH_FLAGS) pt_BR data/lusiadas.txt
+	@$(BATCH) -l elspell-bench.el -f elspell-bench $(BENCH_FLAGS) pt_BR data/lusiadas.txt
 	@echo --------------------------------------------------------------------------------
-	@$(BATCH_NO_NATIVE) -l vibe-spell-bench.el -f vibe-spell-bench $(BENCH_FLAGS) pt_BR data/lusiadas.txt
+	@$(BATCH_NO_NATIVE) -l elspell-bench.el -f elspell-bench $(BENCH_FLAGS) pt_BR data/lusiadas.txt
 	@echo ================================================================================
 	@.tmp/hunspell-check $(BENCH_FLAGS) de_DE data/verwandlung.txt
 	@echo --------------------------------------------------------------------------------
-	@$(BATCH) -l vibe-spell-bench.el -f vibe-spell-bench $(BENCH_FLAGS) de_DE data/verwandlung.txt
+	@$(BATCH) -l elspell-bench.el -f elspell-bench $(BENCH_FLAGS) de_DE data/verwandlung.txt
 	@echo --------------------------------------------------------------------------------
-	@$(BATCH_NO_NATIVE) -l vibe-spell-bench.el -f vibe-spell-bench $(BENCH_FLAGS) de_DE data/verwandlung.txt
+	@$(BATCH_NO_NATIVE) -l elspell-bench.el -f elspell-bench $(BENCH_FLAGS) de_DE data/verwandlung.txt
 	@echo ================================================================================
 	@.tmp/hunspell-check $(BENCH_FLAGS) hu_HU data/egri.txt
 	@echo --------------------------------------------------------------------------------
-	@$(BATCH) -l vibe-spell-bench.el -f vibe-spell-bench $(BENCH_FLAGS) hu_HU data/egri.txt
+	@$(BATCH) -l elspell-bench.el -f elspell-bench $(BENCH_FLAGS) hu_HU data/egri.txt
 	@echo --------------------------------------------------------------------------------
-	@$(BATCH_NO_NATIVE) -l vibe-spell-bench.el -f vibe-spell-bench $(BENCH_FLAGS) hu_HU data/egri.txt
+	@$(BATCH_NO_NATIVE) -l elspell-bench.el -f elspell-bench $(BENCH_FLAGS) hu_HU data/egri.txt

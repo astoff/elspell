@@ -1,6 +1,6 @@
-# vibe-spell.el
-- Private symbols start with `-`.  This is expanded via the shorthand mechanism to the usual `vibe-spell--` prefix.
-- Public symbols are always written in full and have the `vibe-spell-` prefix.
+# elspell.el
+- Private symbols start with `-`.  This is expanded via the shorthand mechanism to the usual `elspell--` prefix.
+- Public symbols are always written in full and have the `elspell-` prefix.
 - Use `named-let` as your go-to looping construct (instead e.g. of `cl-block` or obscure `cl-loop` constructs).
 - Instead of `(cl-loop for v across arr ...)`, prefer `(dotimes (i (length arr)) (let (v (aref arr i)) ...))`.
 - Instead of `(zerop (length s))`, use `string-empty-p`.
@@ -11,7 +11,7 @@
 
 ## Target Emacs 31: prefer core functions over cl-lib habits
 
-We target Emacs 31 (see `Package-Requires` in vibe-spell.el), where several operations availong reached for via `cl-lib` out of habit now have a plain, non-`cl-` core equivalent.  Prefer the right-hand side below:
+We target Emacs 31 (see `Package-Requires` in elspell.el), where several operations availong reached for via `cl-lib` out of habit now have a plain, non-`cl-` core equivalent.  Prefer the right-hand side below:
 
 - `cl-some` / `cl-every` → `any` / `all` (Emacs 31; same `(PRED LIST)` arg order).
 - `cl-incf` / `cl-decf` → `incf` / `decf` (Emacs 31).
